@@ -1,0 +1,202 @@
+/* Authentication: navbar user menu, login/signup cards, profile.
+   Everything below reuses the tokens from tokens.css, so both themes work. */
+
+/* Navbar */
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.user-menu__pending {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.user-menu__profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 190px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.user-menu__profile:hover,
+.user-menu__profile.active {
+  background: var(--color-surface-muted);
+  text-decoration: none;
+}
+
+.user-menu__profile.active {
+  color: var(--color-accent);
+}
+
+.user-menu__avatar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-menu__avatar--letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.user-menu__name {
+  display: none;
+  overflow: hidden;
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .user-menu__name {
+    display: inline;
+  }
+}
+
+/* Small buttons, used in the navbar and in confirmation rows */
+
+.button--sm {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 0.875rem;
+}
+
+.button--danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.button--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.inline-message--info {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.inline-message--info a {
+  color: inherit;
+  font-weight: 700;
+}
+
+/* Login and signup */
+
+.page--auth {
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.auth-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.auth-card__title {
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-card__subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-form__submit {
+  width: 100%;
+}
+
+.auth-card__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.auth-card__divider::before,
+.auth-card__divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+.google-button {
+  width: 100%;
+}
+
+.google-button__mark {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.auth-card__footer {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Profile */
+
+.profile__uid {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+
+.profile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Danger panel (remove a vehicle) */
+
+.panel--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+}
+
+.panel__text {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.confirm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

@@ -9,10 +9,12 @@ dist-ssr
 *.log
 npm-debug.log*
 
-# local env files
+# local env files (real Firebase keys live here, never in git)
 .env
+.env.local
 .env.*.local
 *.local
+!.env.example
 
 # editors and OS
 .vscode/*

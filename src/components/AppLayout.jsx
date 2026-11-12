@@ -1,7 +1,11 @@
 import { NavLink, Outlet, ScrollRestoration } from 'react-router-dom';
 import SimulatedErrorBanner from './SimulatedErrorBanner.jsx';
+import UserMenu from './UserMenu.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 export default function AppLayout() {
+  const { isConfigured, configError } = useAuth();
+
   return (
     <div className="app">
       <header className="app-header">
@@ -18,8 +22,14 @@ export default function AppLayout() {
             <NavLink to="/" end className="app-nav__link">Fleet</NavLink>
             <NavLink to="/vehicles/new" className="app-nav__link">Add vehicle</NavLink>
           </nav>
+          <UserMenu />
         </div>
       </header>
+      {!isConfigured && (
+        <p className="dev-banner" role="note">
+          {configError}
+        </p>
+      )}
       <SimulatedErrorBanner />
       <main className="app-main">
         <Outlet />

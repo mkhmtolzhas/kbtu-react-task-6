@@ -168,3 +168,19 @@ export async function updateVehicleStatus(id, status) {
   });
   return clone(updated);
 }
+
+export async function deleteVehicle(id) {
+  await simulateNetwork();
+  const db = loadDb();
+  const vehicle = db.vehicles.find((item) => item.id === id);
+
+  if (!vehicle) throw new ApiError(`Vehicle "${id}" was not found.`, { status: 404 });
+  if (vehicle.status === 'rented') {
+    throw new ApiError('A rented vehicle cannot be removed from the fleet. End the rental first.', {
+      status: 409,
+    });
+  }
+
+  saveDb({ ...db, vehicles: db.vehicles.filter((item) => item.id !== id) });
+  return { id };
+}

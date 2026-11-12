@@ -1,41 +1,36 @@
 import { useState } from 'react';
 import FormField from './FormField.jsx';
-import { updateVehicleStatus } from '../api/vehiclesApi.js';
+import SignInHint from './SignInHint.jsx';
+import { useAuth } from '../hooks/useAuth.js';
+import { useUpdateStatusMutation } from '../hooks/useVehicleQueries.js';
 import { describedBy } from '../utils/a11y.js';
 import { MIN_FUEL_TO_RENT, STATUS_LABELS } from '../utils/constants.js';
 import { statusesForClass } from '../utils/vehicle.js';
 
 const HINT = `Renting out needs at least ${MIN_FUEL_TO_RENT} % fuel or charge.`;
 
-export default function StatusControl({ vehicleId, vehicleClass, currentStatus, onStatusChange }) {
+export default function StatusControl({ vehicleId, vehicleClass, currentStatus }) {
   // The select starts at the current status; this state is local to one vehicle
   // because the whole details subtree is keyed by the vehicle id.
   const [draftStatus, setDraftStatus] = useState(currentStatus);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [savedStatus, setSavedStatus] = useState(null);
+  const { isAuthenticated } = useAuth();
+  // On success the mutation writes the vehicle into the cache and invalidates the
+  // lists and counters, so this page and the fleet overview update together.
+  const mutation = useUpdateStatusMutation(vehicleId);
 
-  async function handleSubmit(event) {
+  function handleSubmit(event) {
     event.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSavedStatus(null);
-    try {
-      const updated = await updateVehicleStatus(vehicleId, draftStatus);
-      onStatusChange(updated);
-      setSavedStatus(updated.status);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setSaving(false);
-    }
+    mutation.mutate(draftStatus);
   }
 
   function handleDraftChange(event) {
     setDraftStatus(event.target.value);
-    setError(null);
-    setSavedStatus(null);
+    // Drop the result of the previous attempt: it no longer describes the form.
+    mutation.reset();
   }
+
+  const saving = mutation.isPending;
+  const disabled = saving || !isAuthenticated;
 
   return (
     <section className="panel" aria-labelledby="status-control-title">
@@ -47,7 +42,7 @@ export default function StatusControl({ vehicleId, vehicleClass, currentStatus, 
             className="input"
             value={draftStatus}
             onChange={handleDraftChange}
-            disabled={saving}
+            disabled={disabled}
             aria-describedby={describedBy('status-select', { hint: HINT })}
           >
             {statusesForClass(vehicleClass).map((status) => (
@@ -58,16 +53,19 @@ export default function StatusControl({ vehicleId, vehicleClass, currentStatus, 
         <button
           type="submit"
           className="button button--primary"
-          disabled={saving || draftStatus === currentStatus}
+          disabled={disabled || draftStatus === currentStatus}
         >
           {saving ? 'Saving…' : 'Update status'}
         </button>
       </form>
+      {!isAuthenticated && <SignInHint action="change the status of a vehicle" />}
       <div aria-live="polite">
-        {error && <p className="inline-message inline-message--error">{error}</p>}
-        {savedStatus && (
+        {mutation.isError && (
+          <p className="inline-message inline-message--error">{mutation.error.message}</p>
+        )}
+        {mutation.isSuccess && (
           <p className="inline-message inline-message--success">
-            Status changed to {STATUS_LABELS[savedStatus].toLowerCase()}.
+            Status changed to {STATUS_LABELS[mutation.data.status].toLowerCase()}.
           </p>
         )}
       </div>

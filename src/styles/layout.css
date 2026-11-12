@@ -70,6 +70,7 @@
 .app-nav {
   display: flex;
   gap: var(--space-1);
+  margin-inline-start: auto;
 }
 
 .app-nav__link {

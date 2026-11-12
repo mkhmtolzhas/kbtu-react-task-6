@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import DeleteVehicleControl from './DeleteVehicleControl.jsx';
 import EmptyState from './EmptyState.jsx';
 import ErrorMessage from './ErrorMessage.jsx';
 import FuelGauge from './FuelGauge.jsx';
@@ -10,52 +10,23 @@ import StatusBadge from './StatusBadge.jsx';
 import StatusControl from './StatusControl.jsx';
 import StatusHistory from './StatusHistory.jsx';
 import TripEstimator from './TripEstimator.jsx';
-import { getVehicle } from '../api/vehiclesApi.js';
-import { isAbortError } from '../api/network.js';
+import { useVehicleQuery } from '../hooks/useVehicleQueries.js';
 import { CLASS_LABELS, SERVICE_INTERVAL_DAYS } from '../utils/constants.js';
 import { formatDate, formatDaysAgo, formatKm, formatTenge } from '../utils/format.js';
 import { daysSince, energyLabel, isLowFuel } from '../utils/vehicle.js';
 
 // Rendered as <VehicleDetails key={id} />: a different id means a brand-new
 // instance, so no state from the previously opened vehicle can leak in.
+// The vehicle itself comes from the cache: opening a car from the list and
+// coming back shows it instantly, and the status mutation updates it in place.
 export default function VehicleDetails({ id, tripMinutes, onTripMinutesChange }) {
-  const [vehicle, setVehicle] = useState(null);
-  const [loadState, setLoadState] = useState('loading');
-  const [error, setError] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const { data: vehicle, isPending, isError, error, refetch } = useVehicleQuery(id);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoadState('loading');
-
-    getVehicle(id, { signal: controller.signal })
-      .then((data) => {
-        setVehicle(data);
-        setLoadState('success');
-      })
-      .catch((requestError) => {
-        if (isAbortError(requestError)) return;
-        setError(requestError);
-        setLoadState('error');
-      });
-
-    return () => controller.abort();
-  }, [id, reloadKey]);
-
-  function handleStatusChange(updated) {
-    // New object with only the fields the status change touched.
-    setVehicle((prev) => ({
-      ...prev,
-      status: updated.status,
-      statusHistory: updated.statusHistory,
-    }));
-  }
-
-  if (loadState === 'loading') {
+  if (isPending) {
     return <Spinner label="Loading vehicle…" />;
   }
 
-  if (loadState === 'error' && error.status === 404) {
+  if (isError && error.status === 404) {
     return (
       <EmptyState title="Vehicle not found" message={`There is no vehicle with id “${id}” in the fleet.`}>
         <Link className="button button--primary" to="/">Back to fleet</Link>
@@ -63,12 +34,12 @@ export default function VehicleDetails({ id, tripMinutes, onTripMinutesChange })
     );
   }
 
-  if (loadState === 'error') {
+  if (isError) {
     return (
       <ErrorMessage
         title="Could not load this vehicle"
         message={error.message}
-        onRetry={() => setReloadKey((key) => key + 1)}
+        onRetry={() => refetch()}
       />
     );
   }
@@ -147,13 +118,13 @@ export default function VehicleDetails({ id, tripMinutes, onTripMinutesChange })
             vehicleId={vehicle.id}
             vehicleClass={vehicle.class}
             currentStatus={vehicle.status}
-            onStatusChange={handleStatusChange}
           />
           <TripEstimator
             pricePerMinute={vehicle.pricePerMinute}
             minutes={tripMinutes}
             onMinutesChange={onTripMinutesChange}
           />
+          <DeleteVehicleControl vehicleId={vehicle.id} plate={vehicle.plate} />
         </aside>
       </div>
 

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EmptyState from '../components/EmptyState.jsx';
 import ErrorMessage from '../components/ErrorMessage.jsx';
@@ -9,10 +8,9 @@ import SearchBar from '../components/SearchBar.jsx';
 import SortControl from '../components/SortControl.jsx';
 import Spinner from '../components/Spinner.jsx';
 import VehicleGrid from '../components/VehicleGrid.jsx';
-import { listVehicles } from '../api/vehiclesApi.js';
-import { isAbortError } from '../api/network.js';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { useSessionState } from '../hooks/useSessionState.js';
+import { useVehiclesQuery } from '../hooks/useVehicleQueries.js';
 import { PAGE_SIZES } from '../utils/constants.js';
 import { pluralize } from '../utils/format.js';
 
@@ -32,35 +30,20 @@ export default function VehiclesPage() {
   // Everything else the API needs. Always replaced with a new object, never mutated.
   const [query, setQuery] = useSessionState('fleetdesk.list.query', DEFAULT_QUERY);
 
-  const [result, setResult] = useState(null);
-  const [loadState, setLoadState] = useState('loading');
-  const [error, setError] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
   // What is actually sent to the API: the input after 400 ms of silence.
   const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoadState('loading');
-
-    listVehicles({ ...query, search }, { signal: controller.signal })
-      .then((data) => {
-        // Both updates are batched into a single re-render.
-        setResult(data);
-        setLoadState('success');
-      })
-      .catch((requestError) => {
-        // An aborted request belongs to outdated parameters: ignore it.
-        if (isAbortError(requestError)) return;
-        setError(requestError);
-        setLoadState('error');
-      });
-
-    // Runs before the next request and on unmount: cancels the outdated request,
-    // so a slow old response can never overwrite a newer one.
-    return () => controller.abort();
-  }, [query, search, reloadKey]);
+  // The cache is keyed by these parameters: every combination the dispatcher has
+  // already seen comes back instantly, and a slow answer to an older parameter
+  // set is aborted instead of overwriting the current one.
+  const {
+    data: result,
+    isPending,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useVehiclesQuery({ ...query, search });
 
   function handleSearchChange(value) {
     setSearchInput(value);
@@ -103,21 +86,18 @@ export default function VehiclesPage() {
     setQuery((prev) => ({ ...prev, ...DEFAULT_FILTERS, page: 1 }));
   }
 
-  function handleRetry() {
-    setReloadKey((key) => key + 1);
-  }
-
   const hasActiveFilters = searchInput.trim() !== ''
     || Object.keys(DEFAULT_FILTERS).some((name) => query[name] !== DEFAULT_FILTERS[name]);
   const isSearchPending = searchInput.trim() !== search;
-  const isBusy = loadState === 'loading' || isSearchPending;
+  // "Busy" covers a pending debounce and a background revalidation alike.
+  const isBusy = isFetching || isSearchPending;
 
   let content;
-  if (loadState === 'error') {
+  if (isError) {
     content = (
-      <ErrorMessage title="Could not load vehicles" message={error.message} onRetry={handleRetry} />
+      <ErrorMessage title="Could not load vehicles" message={error.message} onRetry={() => refetch()} />
     );
-  } else if (result === null || (isBusy && result.items.length === 0)) {
+  } else if (isPending) {
     content = <Spinner label="Loading vehicles…" />;
   } else if (result.total === 0) {
     content = (
@@ -155,7 +135,7 @@ export default function VehiclesPage() {
 
   // While new data loads, the previous summary stays visible with an "Updating…" mark.
   let summary = '';
-  if (result && loadState !== 'error' && result.items.length > 0) {
+  if (result && !isError && result.items.length > 0) {
     const from = (result.page - 1) * result.pageSize + 1;
     const to = from + result.items.length - 1;
     summary = `Showing ${from}–${to} of ${pluralize(result.total, 'vehicle')}`;

@@ -1,38 +1,20 @@
-import { useEffect, useState } from 'react';
 import ErrorMessage from './ErrorMessage.jsx';
-import { getFleetStats } from '../api/vehiclesApi.js';
-import { isAbortError } from '../api/network.js';
+import { useFleetStatsQuery } from '../hooks/useVehicleQueries.js';
 import { LOW_FUEL_THRESHOLD, STATUS_LABELS, VEHICLE_STATUSES } from '../utils/constants.js';
 import { pluralize } from '../utils/format.js';
 
 // Status tiles that double as a quick status filter.
+// The counters come from their own cache entry, shared by every list view and
+// refreshed automatically after a vehicle is added, changed or removed.
 export default function FleetSummary({ activeStatus, onStatusSelect }) {
-  const [stats, setStats] = useState(null);
-  const [loadState, setLoadState] = useState('loading');
-  const [reloadKey, setReloadKey] = useState(0);
+  const { data: stats, isFetching, isError, refetch } = useFleetStatsQuery();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoadState('loading');
-
-    getFleetStats({ signal: controller.signal })
-      .then((data) => {
-        setStats(data);
-        setLoadState('success');
-      })
-      .catch((error) => {
-        if (!isAbortError(error)) setLoadState('error');
-      });
-
-    return () => controller.abort();
-  }, [reloadKey]);
-
-  if (loadState === 'error') {
+  if (isError) {
     return (
       <ErrorMessage
         title="Fleet summary is unavailable"
         message="The status counters could not be loaded."
-        onRetry={() => setReloadKey((key) => key + 1)}
+        onRetry={() => refetch()}
       />
     );
   }
@@ -47,7 +29,7 @@ export default function FleetSummary({ activeStatus, onStatusSelect }) {
   ];
 
   return (
-    <section className="fleet-summary" aria-labelledby="fleet-summary-title" aria-busy={loadState === 'loading'}>
+    <section className="fleet-summary" aria-labelledby="fleet-summary-title" aria-busy={isFetching}>
       <h2 id="fleet-summary-title" className="visually-hidden">Fleet summary</h2>
       <ul className="fleet-summary__tiles">
         {tiles.map((tile) => (
